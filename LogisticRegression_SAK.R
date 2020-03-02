@@ -1,7 +1,5 @@
-#install.packages("caret")
-
-
-
+#Logistic Regression to find CKD high risk patients
+#Code By @Saniya Khan
 library("caret")
 library("dplyr")
 library("InformationValue")
@@ -137,22 +135,6 @@ summary(classify4)
 acc4=c_accuracy(testData$CKD,classify4)
 acc4
 
-# user-defined different cost for false negative and false positive
-# testDataSubset <- testData["CKD"]
-# testDataSubset$prediction <- predict( model4, newdata = testData )
-# cm_info <- ConfusionMatrixInfo( data = testDataSubset, predict = "prediction", 
-#                                 actual = "CKD", cutoff = .067 )
-# ggthemr("flat")
-# cm_info$plot
-# cm_info$data
-# 
-# 
-# 
-# cost_fp <- 1300
-# cost_fn <- -100
-# roc_info <- ROCInfo( data = cm_info$data, predict = "predict", 
-#                      actual = "actual", cost.fp = cost_fp, cost.fn = cost_fn )
-# grid.draw(roc_info$plot)
 
 
 #Step 3  - Run the Logistic Regression on all data,
@@ -187,15 +169,6 @@ model4_money_max_in =calc_thresh(model4_in,pred4,testData)
 
 ## odds ratios
 pred4_in/(1-pred4_in)
-#X1_range <- seq(from=min(data_in$Age), to=max(data$Age), by=.01)
-#X1_range<-X1_range[1:6000]
-#plot.data <- data.frame(a=pred4_in, X1=X1_range)
-#plot.data <- gather(plot.data, key=group, value=prob, a:c)
-#head(plot.data)
-
-#ggplot(plot.data, aes(x=X1, y=pred4_in)) + # asking it to set the color by the variable "group" is what makes it draw three different lines
-#  geom_line(lwd=2) + 
-#  labs(x="X1", y="P(outcome)", title="Probability of super important outcome") 
 
 #Step 4:Hypothesis test of model, Compare 2 models
 
@@ -269,30 +242,6 @@ write.csv(prediction_df,"Predictions.csv")
 
 #acc=c_accuracy(data_out$CKD,classify)
 #acc
-
-
-c_accuracy=function(actuals,classifications){
-  df=data.frame(actuals,classifications);
-  
-  
-  tp=nrow(df[df$classifications==1 & df$actuals==1,]);        
-  fp=nrow(df[df$classifications==1 & df$actuals==0,]);
-  fn=nrow(df[df$classifications==0 & df$actuals==1,]);
-  tn=nrow(df[df$classifications==0 & df$actuals==0,]); 
-  
-  
-  recall=tp/(tp+fn)
-  precision=tp/(tp+fp)
-  accuracy=(tp+tn)/(tp+fn+fp+tn)
-  tpr=recall
-  fpr=fp/(fp+tn)
-  fmeasure=2*precision*recall/(precision+recall)
-  scores=c(recall,precision,accuracy,tpr,fpr,fmeasure,tp,tn,fp,fn)
-  names(scores)=c("recall","precision","accuracy","tpr","fpr","fmeasure","tp","tn","fp","fn")
-  
-  #print(scores)
-  return(scores);
-}
 calc_thresh=function(model,pred,testData){
   min_model_thresh=0
   max_model_money=-1
@@ -315,110 +264,38 @@ calc_thresh=function(model,pred,testData){
       min_model_thresh=thresh
     }
   }
-df=data.frame(money_vec,threshold_vec)
-colnames(df)<-c("Money","Threshold")
-#plot(df)
- gg<- ggplot(data= df,mapping = aes(x=df$Money,y=df$Threshold)) + geom_point()+
-   geom_text(aes(label=ifelse(df$Threshold==min_model_thresh,as.character(df$Threshold),' ')),hjust=0, vjust=0)
- print(gg)
+  df=data.frame(money_vec,threshold_vec)
+  colnames(df)<-c("Money","Threshold")
+  #plot(df)
+  gg<- ggplot(data= df,mapping = aes(x=df$Money,y=df$Threshold)) + geom_point()+
+    geom_text(aes(label=ifelse(df$Threshold==min_model_thresh,as.character(df$Threshold),' ')),hjust=0, vjust=0)
+  print(gg)
   print(min_model_thresh)
   return(max_model_money)
 }
 
-#--------
-ConfusionMatrixInfo <- function( data, predict, actual, cutoff )
-{    
-  # extract the column ;
-  # relevel making 1 appears on the more commonly seen position in 
-  # a two by two confusion matrix    
-  predict <- data[[predict]]
-  actual  <- relevel( as.factor( data[[actual]] ), "1" )
+# This Method is written by Prof. Matthew J Schnieder.
+c_accuracy=function(actuals,classifications){
+  df=data.frame(actuals,classifications);
   
-  result <- data.table( actual = actual, predict = predict )
   
-  # caculating each pred falls into which category for the confusion matrix
-  result[ , type := ifelse( predict >= cutoff & actual == 1, "TP",
-                            ifelse( predict >= cutoff & actual == 0, "FP", 
-                                    ifelse( predict <  cutoff & actual == 1, "FN", "TN" ) ) ) %>% as.factor() ]
+  tp=nrow(df[df$classifications==1 & df$actuals==1,]);        
+  fp=nrow(df[df$classifications==1 & df$actuals==0,]);
+  fn=nrow(df[df$classifications==0 & df$actuals==1,]);
+  tn=nrow(df[df$classifications==0 & df$actuals==0,]); 
   
-  # jittering : can spread the points along the x axis 
-  plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
-    geom_violin( fill = "white", color = NA ) +
-    geom_jitter( shape = 1 ) + 
-    geom_hline( yintercept = cutoff, color = "blue", alpha = 0.6 ) + 
-    scale_y_continuous( limits = c( 0, 1 ) ) + 
-    scale_color_discrete( breaks = c( "TP", "FN", "FP", "TN" ) ) + # ordering of the legend 
-    guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
-    ggtitle( sprintf( "Confusion Matrix with Cutoff at %.2f", cutoff ) )
   
-  return( list( data = result, plot = plot ) )
+  recall=tp/(tp+fn)
+  precision=tp/(tp+fp)
+  accuracy=(tp+tn)/(tp+fn+fp+tn)
+  tpr=recall
+  fpr=fp/(fp+tn)
+  fmeasure=2*precision*recall/(precision+recall)
+  scores=c(recall,precision,accuracy,tpr,fpr,fmeasure,tp,tn,fp,fn)
+  names(scores)=c("recall","precision","accuracy","tpr","fpr","fmeasure","tp","tn","fp","fn")
+  
+  #print(scores)
+  return(scores);
 }
 
 
-
-
-ROCInfo <- function( data, predict, actual, cost.fp, cost.fn )
-{
-  # calculate the values using the ROCR library
-  # true positive, false postive 
-  pred <- prediction( data[[predict]], data[[actual]] )
-  perf <- performance( pred, "tpr", "fpr" )
-  roc_dt <- data.frame( fpr = perf@x.values[[1]], tpr = perf@y.values[[1]] )
-  
-  # cost with the specified false positive and false negative cost 
-  # false postive rate * number of negative instances * false positive cost + 
-  # false negative rate * number of positive instances * false negative cost
-  cost <- perf@x.values[[1]] * cost.fp * sum( data[[actual]] == 0 ) + 
-    ( 1 - perf@y.values[[1]] ) * cost.fn * sum( data[[actual]] == 1 )
-  
-  cost_dt <- data.frame( cutoff = pred@cutoffs[[1]], cost = cost )
-  
-  # optimal cutoff value, and the corresponding true positive and false positive rate
-  best_index  <- which.min(cost)
-  best_cost   <- cost_dt[ best_index, "cost" ]
-  best_tpr    <- roc_dt[ best_index, "tpr" ]
-  best_fpr    <- roc_dt[ best_index, "fpr" ]
-  best_cutoff <- pred@cutoffs[[1]][ best_index ]
-  
-  # area under the curve
-  auc <- performance( pred, "auc" )@y.values[[1]]
-  
-  # normalize the cost to assign colors to 1
-  normalize <- function(v) ( v - min(v) ) / diff( range(v) )
-  
-  # create color from a palette to assign to the 100 generated threshold between 0 ~ 1
-  # then normalize each cost and assign colors to it, the higher the blacker
-  # don't times it by 100, there will be 0 in the vector
-  col_ramp <- colorRampPalette( c( "green", "orange", "red", "black" ) )(100)   
-  col_by_cost <- col_ramp[ ceiling( normalize(cost) * 99 ) + 1 ]
-  
-  roc_plot <- ggplot( roc_dt, aes( fpr, tpr ) ) + 
-    geom_line( color = rgb( 0, 0, 1, alpha = 0.3 ) ) +
-    geom_point( color = col_by_cost, size = 4, alpha = 0.2 ) + 
-    geom_segment( aes( x = 0, y = 0, xend = 1, yend = 1 ), alpha = 0.8, color = "royalblue" ) + 
-    labs( title = "ROC", x = "False Postive Rate", y = "True Positive Rate" ) +
-    geom_hline( yintercept = best_tpr, alpha = 0.8, linetype = "dashed", color = "steelblue4" ) +
-    geom_vline( xintercept = best_fpr, alpha = 0.8, linetype = "dashed", color = "steelblue4" )                
-  
-  cost_plot <- ggplot( cost_dt, aes( cutoff, cost ) ) +
-    geom_line( color = "blue", alpha = 0.5 ) +
-    geom_point( color = col_by_cost, size = 4, alpha = 0.5 ) +
-    ggtitle( "Cost" ) +
-    scale_y_continuous( labels = comma ) +
-    geom_vline( xintercept = best_cutoff, alpha = 0.8, linetype = "dashed", color = "steelblue4" )    
-  
-  # the main title for the two arranged plot
-  sub_title <- sprintf( "Cutoff at %.2f - Total Cost = %f, AUC = %.3f", 
-                        best_cutoff, best_cost, auc )
-  
-  # arranged into a side by side plot
-  plot <- arrangeGrob( roc_plot, cost_plot, ncol = 2, 
-                       top = textGrob( sub_title, gp = gpar( fontsize = 16, fontface = "bold" ) ) )
-  
-  return( list( plot           = plot, 
-                cutoff       = best_cutoff, 
-                totalcost   = best_cost, 
-                auc         = auc,
-                sensitivity = best_tpr, 
-                specificity = 1 - best_fpr ) )
-}
